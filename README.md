@@ -8,6 +8,8 @@ machine.
 - `skills/catchup/` — the `/catchup` skill: a "get me oriented in this
   project again" report (overview, unfinished `## Status` notes, git state,
   and how to best interact with the project's output).
+- `statusline.sh` — status line showing the current directory and git branch.
+  Needs `python3`.
 
 ## Setup on a new machine
 
@@ -15,6 +17,12 @@ machine.
 git clone https://github.com/cshirky/claude-dotfiles.git ~/claude-dotfiles
 mkdir -p ~/.claude
 ln -s ~/claude-dotfiles/skills ~/.claude/skills
+```
+
+Then point the status line at the script in `~/.claude/settings.json`:
+
+```json
+"statusLine": { "type": "command", "command": "~/claude-dotfiles/statusline.sh" }
 ```
 
 If `~/.claude/skills` already exists and isn't a symlink, move its contents
