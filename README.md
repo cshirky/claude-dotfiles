@@ -31,14 +31,20 @@ Then point the status line at the script in `~/.claude/settings.json`:
 If `~/.claude/skills` already exists and isn't a symlink, move its contents
 into `~/claude-dotfiles/skills/` first, then create the symlink.
 
-**Clone to the path the symlinks expect.** If the repo lives somewhere other
-than `~/claude-dotfiles`, point the symlinks at wherever it actually is —
-`ln -sfn <repo>/skills ~/.claude/skills`. A symlink to a path that doesn't
-exist fails silently in a confusing way: a skill can still be *listed* from a
-stale registry while `/<skill>` reports "Unknown skill". Check with:
+**Clone to the path these instructions expect.** Every path above hardcodes
+`~/claude-dotfiles` — both symlinks and the `statusLine` command. If the repo
+lives somewhere else, fix all three rather than one: point the symlinks with
+`ln -sfn <repo>/skills ~/.claude/skills` and use the real path in
+`settings.json`.
+
+A symlink to a path that doesn't exist fails in a confusing way rather than an
+obvious one: a skill stays *listed* from a stale registry while `/<skill>`
+reports "Unknown skill". Check both links with:
 
 ```
-test -e ~/.claude/skills && echo ok || echo "dangling: $(readlink ~/.claude/skills)"
+for l in ~/.claude/skills ~/.claude/CLAUDE.md; do
+  test -e "$l" && echo "ok: $l" || echo "dangling: $l -> $(readlink "$l")"
+done
 ```
 
 ## Adding a new skill later
