@@ -5,6 +5,8 @@ machine.
 
 ## Contents
 
+- `CLAUDE.md` — personal instructions that apply to every project, loaded
+  from `~/.claude/CLAUDE.md`.
 - `skills/catchup/` — the `/catchup` skill: a "get me oriented in this
   project again" report (overview, unfinished `## Status` notes, git state,
   and how to best interact with the project's output).
@@ -17,6 +19,7 @@ machine.
 git clone https://github.com/cshirky/claude-dotfiles.git ~/claude-dotfiles
 mkdir -p ~/.claude
 ln -s ~/claude-dotfiles/skills ~/.claude/skills
+ln -s ~/claude-dotfiles/CLAUDE.md ~/.claude/CLAUDE.md
 ```
 
 Then point the status line at the script in `~/.claude/settings.json`:
@@ -27,6 +30,16 @@ Then point the status line at the script in `~/.claude/settings.json`:
 
 If `~/.claude/skills` already exists and isn't a symlink, move its contents
 into `~/claude-dotfiles/skills/` first, then create the symlink.
+
+**Clone to the path the symlinks expect.** If the repo lives somewhere other
+than `~/claude-dotfiles`, point the symlinks at wherever it actually is —
+`ln -sfn <repo>/skills ~/.claude/skills`. A symlink to a path that doesn't
+exist fails silently in a confusing way: a skill can still be *listed* from a
+stale registry while `/<skill>` reports "Unknown skill". Check with:
+
+```
+test -e ~/.claude/skills && echo ok || echo "dangling: $(readlink ~/.claude/skills)"
+```
 
 ## Adding a new skill later
 

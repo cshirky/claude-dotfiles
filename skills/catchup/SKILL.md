@@ -59,11 +59,15 @@ tooling exists:
   push-to-deploy is the whole loop.
 - **npm / local dev server** - a `package.json` with a `dev`, `start`, or
   `serve` script. Report the exact command (`npm install && npm run dev`,
-  reading the actual script name rather than assuming "dev").
+  reading the actual script name rather than assuming "dev") and the full URL
+  it serves on, e.g. `http://localhost:3000` - a complete URL is clickable in
+  the terminal, a bare port number is not. Check the script and any config for
+  a non-default port rather than assuming 3000.
 - **Local HTML in the browser** - a standalone `index.html` (often under
   `docs/` or similar) with no build step. Report how to open/serve it (e.g.
   `python3 -m http.server` from that directory, per this project's own
-  instructions if it states one - don't invent a different one).
+  instructions if it states one - don't invent a different one), with the full
+  URL to open once it's up (`http://localhost:8000/`).
 - **Data files** - the project is primarily scripts/notebooks/CSV/JSON with
   no served UI. Report the entry-point script(s) and where output lands.
 

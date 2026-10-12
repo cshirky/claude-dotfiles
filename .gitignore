@@ -1,0 +1,4 @@
+# Claude Code's own managed skill cache: the bundled anthropic-skills, synced
+# per account and keyed by UUID. Machine state, not configuration — it lands
+# here only because ~/.claude/skills is a symlink into this repo.
+skills/synced/
