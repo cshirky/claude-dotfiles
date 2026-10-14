@@ -16,23 +16,25 @@ machine.
 ## Setup on a new machine
 
 ```
-git clone https://github.com/cshirky/claude-dotfiles.git ~/claude-dotfiles
+git clone https://github.com/cshirky/claude-dotfiles.git ~/claude_projects/claude-dotfiles
 mkdir -p ~/.claude
-ln -s ~/claude-dotfiles/skills ~/.claude/skills
-ln -s ~/claude-dotfiles/CLAUDE.md ~/.claude/CLAUDE.md
+ln -s ~/claude_projects/claude-dotfiles/skills ~/.claude/skills
+ln -s ~/claude_projects/claude-dotfiles/CLAUDE.md ~/.claude/CLAUDE.md
 ```
 
-Then point the status line at the script in `~/.claude/settings.json`:
+Then point the status line at the script in `~/.claude/settings.json`. This
+step is easy to miss: `settings.json` isn't symlinked, so nothing in this repo
+sets it, and without it the status line simply doesn't appear.
 
 ```json
-"statusLine": { "type": "command", "command": "~/claude-dotfiles/statusline.sh" }
+"statusLine": { "type": "command", "command": "~/claude_projects/claude-dotfiles/statusline.sh" }
 ```
 
 If `~/.claude/skills` already exists and isn't a symlink, move its contents
-into `~/claude-dotfiles/skills/` first, then create the symlink.
+into `~/claude_projects/claude-dotfiles/skills/` first, then create the symlink.
 
 **Clone to the path these instructions expect.** Every path above hardcodes
-`~/claude-dotfiles` — both symlinks and the `statusLine` command. If the repo
+`~/claude_projects/claude-dotfiles` — both symlinks and the `statusLine` command. If the repo
 lives somewhere else, fix all three rather than one: point the symlinks with
 `ln -sfn <repo>/skills ~/.claude/skills` and use the real path in
 `settings.json`.
