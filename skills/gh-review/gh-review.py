@@ -21,6 +21,7 @@ import os
 import re
 import subprocess
 import sys
+import time
 from concurrent.futures import ThreadPoolExecutor
 
 DEFAULT_OWNER = "cshirky"
@@ -51,15 +52,29 @@ def save_cache(owner, cache):
     os.replace(tmp, path)
 
 
-def gh(*args):
-    """Run gh; return parsed JSON, or None on error (404 etc.)."""
-    r = subprocess.run(["gh", *args], capture_output=True, text=True)
-    if r.returncode != 0:
-        return None
-    try:
-        return json.loads(r.stdout) if r.stdout.strip() else None
-    except json.JSONDecodeError:
-        return None
+class FetchError(Exception):
+    """A gh call failed for a reason other than "not found"."""
+
+
+def gh(*args, tries=3):
+    """Run gh and return parsed JSON. Returns None only for a genuine 404
+    (no Pages site, no README...). Any other failure - rate limit, network,
+    server error - is retried, then raised as FetchError so the caller never
+    caches a half-fetched repo as if it were real data."""
+    err = ""
+    for attempt in range(tries):
+        r = subprocess.run(["gh", *args], capture_output=True, text=True)
+        if r.returncode == 0:
+            try:
+                return json.loads(r.stdout) if r.stdout.strip() else None
+            except json.JSONDecodeError:
+                err = "unparseable JSON"
+        elif "HTTP 404" in r.stderr:
+            return None
+        else:
+            err = r.stderr.strip().splitlines()[-1] if r.stderr.strip() else f"exit {r.returncode}"
+        time.sleep(2 ** attempt * 2)
+    raise FetchError(f"gh {' '.join(args)}: {err}")
 
 
 def file_text(full, path):
@@ -73,8 +88,8 @@ def file_text(full, path):
 
 
 def detect_hosting(full, meta, paths, pages):
-    owner = full.split("/")[0].lower()
     """Return {"github_pages": ..., "other": [...], "local": [...]}."""
+    owner = full.split("/")[0].lower()
     names = {p.rsplit("/", 1)[-1] for p in paths}
     top = set(p for p in paths if "/" not in p)
     home = (meta.get("homepageUrl") or "").lower()
@@ -199,17 +214,29 @@ def fetch_repo(owner, meta):
 
 def cmd_scan(args):
     cache = load_cache(args.owner)
-    repos = gh("repo", "list", args.owner, "--limit", "1000", "--json", LIST_FIELDS)
-    if repos is None:
-        sys.exit("gh repo list failed - is gh installed and authenticated?")
+    try:
+        repos = gh("repo", "list", args.owner, "--limit", "1000", "--json", LIST_FIELDS)
+    except FetchError as e:
+        sys.exit(f"gh repo list failed - is gh installed and authenticated?\n{e}")
     old = cache["repos"]
     current = {r["name"] for r in repos}
     stale = [r for r in repos if args.refresh or r["name"] not in old
              or old[r["name"]].get("pushedAt") != r["pushedAt"]
              or old[r["name"]].get("updatedAt") != r["updatedAt"]]
 
-    with ThreadPoolExecutor(max_workers=8) as ex:
-        fresh = list(ex.map(lambda m: fetch_repo(args.owner, m), stale))
+    def safe_fetch(meta):
+        try:
+            return fetch_repo(args.owner, meta)
+        except FetchError as e:
+            return {"name": meta["name"], "error": str(e)}
+
+    # Few workers: GitHub's secondary rate limit trips on bursts of requests.
+    with ThreadPoolExecutor(max_workers=3) as ex:
+        results = list(ex.map(safe_fetch, stale))
+    failed = {r["name"]: r["error"] for r in results if "error" in r}
+    fresh = [r for r in results if "error" not in r]
+    # A failed repo keeps its previous cache entry (with its old pushedAt), so
+    # it is retried on the next run instead of being cached half-empty.
     for rec in fresh:
         prev = old.get(rec["name"], {})
         # Keep the old precis only if the README/description didn't change.
@@ -226,7 +253,8 @@ def cmd_scan(args):
              "readme_excerpt": r["readme_excerpt"],
              "top_level": r.get("top_level", [])}
             for r in old.values() if not r.get("precis")]
-    json.dump({"total": len(current), "rechecked": [r["name"] for r in stale],
+    json.dump({"total": len(current), "rechecked": [r["name"] for r in fresh],
+               "failed": failed,
                "unchanged": len(current) - len(stale), "removed": removed,
                "need_precis": need, "cache": cache_path(args.owner)},
               sys.stdout, indent=1)
