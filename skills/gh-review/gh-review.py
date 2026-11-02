@@ -9,7 +9,11 @@ Subcommands:
                                  description and README excerpt to write it from.
   set-precis FILE                FILE is JSON {"repo-name": "precis", ...};
                                  stores each precis in the cache.
-  report [--owner O]             Print the markdown report from the cache.
+  report [--owner O] [--html P] [--markdown]
+                                 Write the HTML report (default
+                                 ~/claude_projects/gh-review.html) and print
+                                 its file:// URL; --markdown also prints the
+                                 table to stdout.
 
 Cache: ${XDG_CACHE_HOME:-~/.cache}/gh-review/<owner>.json
 Needs: gh (authenticated), python3.
@@ -28,6 +32,9 @@ DEFAULT_OWNER = "cshirky"
 LIST_FIELDS = ("name,description,pushedAt,updatedAt,homepageUrl,isPrivate,"
                "isFork,isArchived,isEmpty,defaultBranchRef,url")
 README_CHARS = 1500
+DEFAULT_HTML = os.path.expanduser("~/claude_projects/gh-review.html")
+HTML_TEMPLATE = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                             "report_template.html")
 
 
 def cache_path(owner):
@@ -283,11 +290,13 @@ def hosting_cell(h):
     return "<br>".join(parts) if parts else "none detected"
 
 
-def cmd_report(args):
-    cache = load_cache(args.owner)
-    rows = sorted(cache["repos"].values(),
+def sorted_rows(cache):
+    return sorted(cache["repos"].values(),
                   key=lambda r: (r.get("last_change") or {}).get("date") or "",
                   reverse=True)
+
+
+def print_markdown(rows):
     print("| Repo | What it's for | Serving | Last change |")
     print("|---|---|---|---|")
     for r in rows:
@@ -308,6 +317,37 @@ def cmd_report(args):
         print(f"| {name} | {precis} | {hosting_cell(r['hosting'])} | {last} |")
 
 
+def write_html(owner, rows, path):
+    data = [{
+        "name": r["name"], "url": r.get("url"),
+        "private": bool(r.get("isPrivate")), "fork": bool(r.get("isFork")),
+        "archived": bool(r.get("isArchived")), "empty": bool(r.get("empty")),
+        "precis": r.get("precis") or r.get("description") or "",
+        "hosting": r.get("hosting") or {},
+        "homepage": r.get("homepageUrl") or "",
+        "last": r.get("last_change"),
+    } for r in rows]
+    payload = json.dumps({"owner": owner,
+                          "generated": time.strftime("%Y-%m-%d %H:%M"),
+                          "repos": data})
+    # Keep the JSON from closing the <script> element early.
+    payload = payload.replace("</", "<\\/")
+    with open(HTML_TEMPLATE) as f:
+        page = f.read().replace("__DATA__", payload).replace("__OWNER__", owner)
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w") as f:
+        f.write(page)
+
+
+def cmd_report(args):
+    rows = sorted_rows(load_cache(args.owner))
+    if args.markdown:
+        print_markdown(rows)
+    path = os.path.abspath(os.path.expanduser(args.html))
+    write_html(args.owner, rows, path)
+    print(f"HTML report: file://{path}")
+
+
 def main():
     p = argparse.ArgumentParser(description=__doc__,
                                 formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -315,6 +355,8 @@ def main():
     s = sub.add_parser("scan"); s.add_argument("--refresh", action="store_true")
     sp = sub.add_parser("set-precis"); sp.add_argument("file")
     rp = sub.add_parser("report")
+    rp.add_argument("--html", default=DEFAULT_HTML)
+    rp.add_argument("--markdown", action="store_true")
     for x in (s, sp, rp):
         x.add_argument("--owner", default=DEFAULT_OWNER)
     args = p.parse_args()

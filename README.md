@@ -10,9 +10,10 @@ machine.
 - `skills/catchup/` — the `/catchup` skill: a "get me oriented in this
   project again" report (overview, unfinished `## Status` notes, git state,
   and how to best interact with the project's output).
-- `skills/gh-review/` — the `/gh-review` skill: a table of every repo in the
-  GitHub account with a precis, serving options (local / github.io / Vercel
-  etc.), and the most recently changed file. Needs `gh` (authenticated) and
+- `skills/gh-review/` — the `/gh-review` skill: an HTML page
+  (`~/claude_projects/gh-review.html`) listing every repo in the GitHub
+  account with a precis, serving options (local / github.io / Vercel etc.),
+  and the most recently changed file. Needs `gh` (authenticated) and
   `python3`. Caches per machine in `~/.cache/gh-review/`, so only repos pushed
   since the last run are re-fetched.
 - `statusline.sh` — status line showing the current directory and git branch.

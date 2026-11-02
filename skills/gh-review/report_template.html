@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GitHub Repo Review</title>
+<style>
+:root {
+  --bg: #fafaf9; --surface: #ffffff; --text: #1c1917; --muted: #78716c;
+  --border: #e7e5e4; --link: #1d4ed8; --head: #f5f5f4;
+  --pages: #15803d; --pages-bg: #dcfce7;
+  --host: #7c3aed; --host-bg: #ede9fe;
+  --local: #b45309; --local-bg: #fef3c7;
+  --flag: #57534e; --flag-bg: #f5f5f4;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1c1917; --surface: #262220; --text: #f5f5f4; --muted: #a8a29e;
+    --border: #3a3532; --link: #93c5fd; --head: #2e2a27;
+    --pages: #86efac; --pages-bg: #14532d;
+    --host: #c4b5fd; --host-bg: #3b2a6b;
+    --local: #fcd34d; --local-bg: #5a3b0a;
+    --flag: #d6d3d1; --flag-bg: #3a3532;
+  }
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--bg); color: var(--text);
+  font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+main { max-width: 1280px; margin: 0 auto; padding: 24px 16px 48px; }
+h1 { font-size: 22px; margin: 0 0 4px; }
+.sub { color: var(--muted); margin: 0 0 18px; }
+.controls { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; margin-bottom: 14px; }
+.controls input[type=search] {
+  flex: 1 1 240px; padding: 7px 10px; font: inherit; color: var(--text);
+  background: var(--surface); border: 1px solid var(--border); border-radius: 6px;
+}
+.controls label { color: var(--muted); white-space: nowrap; cursor: pointer; }
+.count { color: var(--muted); margin-left: auto; }
+.wrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; }
+table { width: 100%; border-collapse: collapse; }
+th, td { text-align: left; vertical-align: top; padding: 9px 12px; border-bottom: 1px solid var(--border); }
+tr:last-child td { border-bottom: 0; }
+th {
+  background: var(--head); font-weight: 600; font-size: 12px; text-transform: uppercase;
+  letter-spacing: .03em; color: var(--muted); cursor: pointer; user-select: none; white-space: nowrap;
+}
+th[aria-sort=ascending]::after { content: " ▲"; }
+th[aria-sort=descending]::after { content: " ▼"; }
+td.name { white-space: nowrap; font-weight: 600; }
+td.precis { min-width: 260px; }
+td.serve { min-width: 200px; }
+td.last { min-width: 180px; }
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+.tag { display: inline-block; font-size: 11px; font-weight: 600; padding: 1px 7px; border-radius: 999px; margin: 1px 4px 1px 0; }
+.flag { color: var(--flag); background: var(--flag-bg); font-weight: 500; }
+.pages { color: var(--pages); background: var(--pages-bg); }
+.host { color: var(--host); background: var(--host-bg); }
+.local { color: var(--local); background: var(--local-bg); }
+.serve div { margin: 2px 0; }
+.serve code, .last code { font-size: 12px; overflow-wrap: anywhere; }
+.muted { color: var(--muted); }
+.date { font-variant-numeric: tabular-nums; }
+@media (max-width: 640px) { td.name { white-space: normal; } }
+</style>
+</head>
+<body>
+<main>
+  <h1>GitHub repos: __OWNER__</h1>
+  <p class="sub" id="sub"></p>
+  <div class="controls">
+    <input type="search" id="q" placeholder="Filter by name, purpose, hosting, file…" aria-label="Filter">
+    <label><input type="checkbox" id="hideForks"> Hide forks</label>
+    <label><input type="checkbox" id="liveOnly"> Has hosting (github.io, Vercel…)</label>
+    <span class="count" id="count"></span>
+  </div>
+  <div class="wrap">
+    <table>
+      <thead><tr>
+        <th data-key="name">Repo</th>
+        <th data-key="precis">What it's for</th>
+        <th data-key="serve">Serving</th>
+        <th data-key="date" aria-sort="descending">Last change</th>
+      </tr></thead>
+      <tbody id="rows"></tbody>
+    </table>
+  </div>
+</main>
+<script>
+const DATA = __DATA__;
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const link = (url, text) => {
+  const u = /^https?:\/\//i.test(url) ? url : "https://" + url;
+  return `<a href="${esc(u)}" target="_blank" rel="noopener">${esc(text ?? url)}</a>`;
+};
+// Hosted = github.io or a hosting service; a bare homepage link elsewhere doesn't count.
+const isLive = r => !!(r.hosting.github_pages || (r.hosting.other || []).some(o => !o.startsWith("homepage: ")));
+
+function serveCell(r) {
+  const h = r.hosting, out = [];
+  if (h.github_pages) out.push(`<div><span class="tag pages">github.io</span>${link(h.github_pages)}</div>`);
+  for (const o of h.other || []) {
+    if (o.startsWith("homepage: ")) out.push(`<div><span class="tag flag">homepage</span>${link(o.slice(10))}</div>`);
+    else out.push(`<div><span class="tag host">${esc(o)}</span>${r.homepage && !h.github_pages ? link(r.homepage) : ""}</div>`);
+  }
+  for (const l of h.local || []) out.push(`<div><span class="tag local">local</span><code>${esc(l)}</code></div>`);
+  return out.join("") || `<span class="muted">none detected</span>`;
+}
+function lastCell(r) {
+  if (r.empty) return `<span class="muted">empty repo</span>`;
+  const l = r.last;
+  if (!l) return `<span class="muted">—</span>`;
+  const f = l.file ? `<code>${esc(l.file)}</code>` : `<span class="muted">(no files)</span>`;
+  const more = l.other_files ? ` <span class="muted">+${l.other_files} more</span>` : "";
+  return `<span class="date">${esc(l.date.slice(0, 10))}</span><br>${f}${more}`;
+}
+const serveText = r => [r.hosting.github_pages, ...(r.hosting.other || []), ...(r.hosting.local || [])].filter(Boolean).join(" ");
+const sortVal = {
+  name: r => r.name.toLowerCase(),
+  precis: r => r.precis.toLowerCase(),
+  serve: r => (r.hosting.github_pages ? "0" : (r.hosting.other || []).length ? "1" : (r.hosting.local || []).length ? "2" : "3") + r.name.toLowerCase(),
+  date: r => (r.last && r.last.date) || "",
+};
+let sortKey = "date", sortDir = -1;
+
+function render() {
+  const q = document.getElementById("q").value.trim().toLowerCase();
+  const hideForks = document.getElementById("hideForks").checked;
+  const liveOnly = document.getElementById("liveOnly").checked;
+  const rows = DATA.repos.filter(r =>
+    (!hideForks || !r.fork) && (!liveOnly || isLive(r)) &&
+    (!q || [r.name, r.precis, serveText(r), r.last && r.last.file].join(" ").toLowerCase().includes(q))
+  ).sort((a, b) => {
+    const x = sortVal[sortKey](a), y = sortVal[sortKey](b);
+    return (x < y ? -1 : x > y ? 1 : 0) * sortDir;
+  });
+  document.getElementById("rows").innerHTML = rows.map(r => {
+    const flags = ["private", "fork", "archived"].filter(k => r[k]).map(k => `<span class="tag flag">${k}</span>`).join("");
+    return `<tr>
+      <td class="name">${link(r.url, r.name)}<br>${flags}</td>
+      <td class="precis">${esc(r.precis) || '<span class="muted">—</span>'}</td>
+      <td class="serve">${serveCell(r)}</td>
+      <td class="last">${lastCell(r)}</td></tr>`;
+  }).join("");
+  document.getElementById("count").textContent = `${rows.length} of ${DATA.repos.length} shown`;
+}
+
+const live = DATA.repos.filter(isLive).length;
+document.getElementById("sub").textContent =
+  `${DATA.repos.length} repos · ${live} with hosting · generated ${DATA.generated}`;
+document.querySelectorAll("th").forEach(th => th.addEventListener("click", () => {
+  const k = th.dataset.key;
+  sortDir = k === sortKey ? -sortDir : (k === "date" ? -1 : 1);
+  sortKey = k;
+  document.querySelectorAll("th").forEach(t => t.removeAttribute("aria-sort"));
+  th.setAttribute("aria-sort", sortDir === 1 ? "ascending" : "descending");
+  render();
+}));
+["q", "hideForks", "liveOnly"].forEach(id => document.getElementById(id).addEventListener("input", render));
+render();
+</script>
+</body>
+</html>

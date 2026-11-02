@@ -61,12 +61,23 @@ A stored precis is kept until the repo's README or description changes.
 python3 ~/.claude/skills/gh-review/gh-review.py report
 ```
 
-This prints a markdown table, newest change first: repo (linked, flagged
-private/fork/archived), precis, serving options, and last change (date plus
+This writes a self-contained HTML page to `~/claude_projects/gh-review.html`
+(override with `--html <path>`) and prints its `file://` URL. The page lists
+every repo, newest change first: repo (linked, tagged private/fork/archived),
+precis, serving options (live URLs are links), and last change (date plus
 the first file in the most recent commit, "+N more" if the commit touched
-others). Show the table as printed. Above it, add one line:
-`42 repos — 3 rechecked, 39 from cache` (use the real numbers, and list
-the rechecked names if there are only a few).
+others). Columns sort on click, and the page can filter by text, hide forks,
+or show only repos with hosting.
+
+In the terminal, don't paste the whole table. Give:
+1. One summary line, e.g. `42 repos — 3 rechecked, 39 from cache` (real
+   numbers; name the rechecked repos if there are only a few, and always name
+   any failed ones).
+2. The full `file://` URL the script printed, so it's one click to open.
+3. The observations described below.
+
+If the user asks for the table in the terminal, add `--markdown` and show
+what it prints.
 
 How to read the Serving column:
 - `github.io: <url>` means Pages is enabled (from the Pages API) or the
@@ -78,6 +89,6 @@ How to read the Serving column:
   Streamlit, FastAPI or Dash app, Jekyll, or a shallow `index.html` that
   `python3 -m http.server` can serve.
 
-After the table, add at most three short observations if any stand out,
+Add at most three short observations if any stand out,
 such as a live site in a repo with no recent commits, or near-duplicate
 repos. Skip them if nothing stands out.
