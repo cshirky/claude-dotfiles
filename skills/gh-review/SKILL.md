@@ -23,8 +23,12 @@ This lists every repo with `gh repo list`, then compares each one's
 `pushedAt`/`updatedAt` with the cache at `~/.cache/gh-review/<owner>.json`.
 It re-fetches only new or changed repos: last commit, files in that commit,
 file tree, Pages status, deployments, README. Deleted repos are dropped from
-the cache. It prints JSON with `rechecked`, `unchanged`, `removed`, and
-`need_precis`.
+the cache. It prints JSON with `rechecked`, `failed`, `unchanged`,
+`removed`, and `need_precis`.
+
+A repo in `failed` (rate limit, network error) keeps its previous cache
+entry and is retried next run. Name the failed repos in the report's summary
+line so stale rows aren't mistaken for current ones.
 
 ## 2. Write a precis for each entry in `need_precis`
 
