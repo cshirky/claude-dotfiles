@@ -30,6 +30,11 @@ data, docs), plus candidate lists:
 - `css_selector_defined_repeatedly` and `css_identical_blocks`
 - `data_files_sharing_schema`: same CSV header or JSON keys
 - `markdown_broken_links` and `markdown_repeated_headings`
+- `large_files_in_git` (git repos only): data files of 10 MB or more that
+  are committed, sitting untracked but not ignored (one `git add .` from
+  being committed), or deleted but still in history. Each is tagged against
+  GitHub's 50 MB warning and 100 MB push limit, and LFS-tracked files are
+  marked.
 - `smells`: very long files, many inline styles, large inline scripts,
   hard-coded local paths, possible committed secrets, bare `except:`,
   committed junk such as `.pyc` and `.DS_Store`, and TODO markers
@@ -78,6 +83,13 @@ central. Skim the rest. Look for:
   - CSS fighting itself (`!important` chains, the same selector restyled in
     several places)
   - Markdown docs that contradict the code or each other
+- **Large data in git:** for each `large_files_in_git` entry, say whether
+  the file can be rebuilt from a script or downloaded from its source. If
+  so, the usual response is to add it to `.gitignore` and document how to
+  get it. If it must be versioned, suggest Git LFS. For files that are only
+  in history, note that removing them needs a history rewrite
+  (`git filter-repo`) and a force-push. Flag that as large effort and
+  something for the user to decide, never a casual cleanup.
 - **Stale docs:** README or CLAUDE.md describing files, commands or URLs
   that no longer exist.
 

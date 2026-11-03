@@ -68,6 +68,64 @@ def list_files(root):
     return files, False
 
 
+LARGE = 10 * 2**20        # report files at or above this size
+GH_WARN = 50 * 2**20      # GitHub warns on push
+GH_LIMIT = 100 * 2**20    # GitHub rejects the push
+
+
+def git_lines(root, *args):
+    try:
+        return subprocess.run(["git", "-C", root, *args], capture_output=True,
+                              text=True, check=True).stdout.splitlines()
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        return []
+
+
+def large_git_files(root):
+    """Big files committed (or about to be), and big blobs left in history."""
+    def level(n):
+        return "over GitHub's 100 MB limit" if n >= GH_LIMIT else \
+               "over GitHub's 50 MB warning" if n >= GH_WARN else "large"
+    tracked = set(git_lines(root, "ls-files"))
+    lfs = set(git_lines(root, "lfs", "ls-files", "--name-only"))
+    committed, untracked = [], []
+    for p in git_lines(root, "ls-files", "-co", "--exclude-standard"):
+        try:
+            n = os.path.getsize(os.path.join(root, p))
+        except OSError:
+            continue
+        if n < LARGE:
+            continue
+        item = {"file": p, "mb": round(n / 2**20, 1), "level": level(n)}
+        if p in tracked:
+            if p in lfs:
+                item["lfs"] = True
+            committed.append(item)
+        else:
+            untracked.append(item)  # not ignored either: one `git add .` away
+    # Blobs in history that are no longer in the current tree still bloat
+    # every clone. rev-list over all objects is fast on repos this size.
+    current = {p for p in tracked}
+    history = []
+    objs = git_lines(root, "rev-list", "--objects", "--all")
+    if objs:
+        r = subprocess.run(["git", "-C", root, "cat-file",
+                            "--batch-check=%(objecttype) %(objectsize) %(rest)"],
+                           input="\n".join(objs) + "\n", capture_output=True, text=True)
+        seen = set()
+        for line in r.stdout.splitlines():
+            parts = line.split(" ", 2)
+            if len(parts) == 3 and parts[0] == "blob" and int(parts[1]) >= LARGE:
+                path = parts[2]
+                if path and path not in current and path not in seen:
+                    seen.add(path)
+                    history.append({"file": path, "mb": round(int(parts[1]) / 2**20, 1)})
+    key = lambda x: -x["mb"]
+    return {"committed": sorted(committed, key=key)[:30],
+            "untracked_not_ignored": sorted(untracked, key=key)[:30],
+            "removed_but_in_history": sorted(history, key=key)[:30]}
+
+
 def ext(p):
     return os.path.splitext(p)[1].lower() if os.path.splitext(p)[1] else ""
 
@@ -117,10 +175,17 @@ def main():
     out["inventory"] = dict(inv)
     out["largest_files"] = sorted(([p, sizes[p]] for p in files), key=lambda x: -x[1])[:10]
 
-    # Exact duplicate files
-    by_hash = defaultdict(list)
+    # Exact duplicate files. Group by size first: files of different sizes
+    # can't be identical, so most big data files are never read at all.
+    by_size = defaultdict(list)
     for p in files:
         if sizes[p] >= MIN_DUP_SIZE:
+            by_size[sizes[p]].append(p)
+    by_hash = defaultdict(list)
+    for group in by_size.values():
+        if len(group) < 2:
+            continue
+        for p in group:
             h = hashlib.sha1()
             with open(os.path.join(root, p), "rb") as f:
                 for chunk in iter(lambda: f.read(1 << 20), b""):
@@ -319,6 +384,8 @@ def main():
         if ext(p) in {".pyc", ".ds_store"} or os.path.basename(p) == ".DS_Store":
             smells["committed_junk_files"].append(p)
     out["smells"] = {k: v[:40] for k, v in smells.items()}
+    if in_git:
+        out["large_files_in_git"] = large_git_files(root)
     json.dump(out, sys.stdout, indent=1)
     print()
 
