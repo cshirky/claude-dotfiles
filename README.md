@@ -19,7 +19,7 @@ machine.
 - `skills/project-review/` — the `/project-review` skill: a whole-project
   tidy-up review (unused work, duplicates that could be merged, bad design
   patterns) across code, data, HTML, CSS and Markdown, written to
-  `DATA/project-review-YYYY-MM-DD.md` in the project. Report only. `scan.py`
+  `NOTES/project-review-YYYY-MM-DD.md` in the project. Report only. `scan.py`
   does the mechanical pass; Claude verifies and adds the judgment calls.
 - `statusline.sh` — status line showing the current directory and git branch.
   Needs `python3`.
