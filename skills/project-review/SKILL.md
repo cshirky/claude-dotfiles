@@ -1,6 +1,6 @@
 ---
 name: project-review
-description: Whole-project tidy-up review. Scans code, data files, HTML, CSS and Markdown for unused work, duplicate definitions that could be merged, and bad design patterns, groups the findings by type with a suggested response for each, and writes them to DATA/project-review-YYYY-MM-DD.md. Report only - changes nothing else. Use when the user runs /project-review or asks for a cleanup, dead-code, duplication or design review of a whole project (not a diff; for bugs in a diff use /code-review).
+description: Whole-project tidy-up review. Scans code, data files, HTML, CSS and Markdown for unused work, duplicate definitions that could be merged, and bad design patterns, groups the findings by type with a suggested response for each, and writes them to NOTES/project-review-YYYY-MM-DD.md. Report only - changes nothing else. Use when the user runs /project-review or asks for a cleanup, dead-code, duplication or design review of a whole project (not a diff; for bugs in a diff use /code-review).
 ---
 
 # project-review
@@ -99,8 +99,8 @@ lines.
 
 ## 3. Write the report
 
-Write the report to `DATA/project-review-YYYY-MM-DD.md` in the project root,
-using today's date. Create `DATA/` if it doesn't exist. If today's file
+Write the report to `NOTES/project-review-YYYY-MM-DD.md` in the project root,
+using today's date. Create `NOTES/` if it doesn't exist. If today's file
 already exists, use `-2`, `-3` and so on rather than overwriting it.
 
 Structure:

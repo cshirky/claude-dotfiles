@@ -35,8 +35,8 @@ the same name for all of them. Don't ask first: rename to match and mention
 it in the summary.
 
 ```
-yes:  skill /project-review → skills/project-review/ → DATA/project-review-2026-11-03.md
-no:   skill /project-review writing DATA/code-review-2026-11-03.md
+yes:  skill /project-review → skills/project-review/ → NOTES/project-review-2026-11-03.md
+no:   skill /project-review writing NOTES/code-review-2026-11-03.md
 ```
 
 - When something gets renamed, carry the new name through everything
