@@ -27,3 +27,20 @@ something to retype or assemble by hand.
 - Same rule for non-local URLs worth clicking — a deploy, a PR, a dashboard.
   Print the whole `https://…`, never a bare domain or a description of where
   to find it.
+
+## Keep names consistent across repos, skills, files and folders
+
+When a repo, skill, script, output file or folder names the same thing, use
+the same name for all of them. Don't ask first: rename to match and mention
+it in the summary.
+
+```
+yes:  skill /project-review → skills/project-review/ → DATA/project-review-2026-11-03.md
+no:   skill /project-review writing DATA/code-review-2026-11-03.md
+```
+
+- When something gets renamed, carry the new name through everything
+  derived from it (folders, scripts, cache paths, output files, README
+  lines) in the same change.
+- Follow the existing separator style of the thing being matched (`-` vs
+  `_`) unless a tool forbids it, and say so if one does.
